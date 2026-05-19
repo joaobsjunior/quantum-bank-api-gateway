@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: Quantum Bank API
+  version: 1.0.0
+  description: App-facing KrakenD API contract for Quantum Bank local v1.
+servers:
+  - url: http://localhost:8080
+    description: Local KrakenD gateway
+tags:
+  - name: Auth
+  - name: Pix
+  - name: Statements
+  - name: Profile
+paths:
+  /auth/otk:
+    post:
+      tags: [Auth]
+      summary: Issue a one-time token for CSR bootstrap.
+      operationId: issueOtk
+      security:
+        - OAuth2Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtkIssueRequest'
+      responses:
+        "201":
+          description: OTK issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtkIssueResponse'
+        "400":
+          $ref: '#/components/responses/BadRequestProblem'
+        "401":
+          $ref: '#/components/responses/UnauthorizedProblem'
+        "500":
+          $ref: '#/components/responses/InternalProblem'
+  /auth/csr:
+    post:
+      tags: [Auth]
+      summary: Submit CSR and OTK for mobile client certificate issuance.
+      operationId: submitCsr
+      security:
+        - OAuth2Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsrSubmitRequest'
+      responses:
+        "201":
+          description: CSR accepted and certificate issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrSubmitResponse'
+        "400":
+          $ref: '#/components/responses/BadRequestProblem'
+        "401":
+          $ref: '#/components/responses/UnauthorizedProblem'
+        "409":
+          $ref: '#/components/responses/ConflictProblem'
+        "500":
+          $ref: '#/components/responses/InternalProblem'
+  /pix/transfers:
+    post:
+      tags: [Pix]
+      summary: Simulate a Pix transfer success or error path.
+      operationId: createPixTransfer
+      security:
+        - OAuth2Bearer: []
+          MutualTLS: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PixTransferRequest'
+      responses:
+        "200":
+          description: Pix transfer simulated as success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PixTransferSuccessResponse'
+        "400":
+          $ref: '#/components/responses/BadRequestProblem'
+        "401":
+          $ref: '#/components/responses/UnauthorizedProblem'
+        "403":
+          $ref: '#/components/responses/ForbiddenProblem'
+        "500":
+          $ref: '#/components/responses/InternalProblem'
+  /statements:
+    get:
+      tags: [Statements]
+      summary: Retrieve account statement entries.
+      operationId: getStatements
+      security:
+        - OAuth2Bearer: []
+          MutualTLS: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Statement data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementResponse'
+        "401":
+          $ref: '#/components/responses/UnauthorizedProblem'
+        "403":
+          $ref: '#/components/responses/ForbiddenProblem'
+        "500":
+          $ref: '#/components/responses/InternalProblem'
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Retrieve customer registration data.
+      operationId: getProfile
+      security:
+        - OAuth2Bearer: []
+          MutualTLS: []
+      responses:
+        "200":
+          description: Customer profile data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        "401":
+          $ref: '#/components/responses/UnauthorizedProblem'
+        "403":
+          $ref: '#/components/responses/ForbiddenProblem'
+        "500":
+          $ref: '#/components/responses/InternalProblem'
+components:
+  securitySchemes:
+    OAuth2Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    MutualTLS:
+      type: mutualTLS
+  responses:
+    BadRequestProblem:
+      description: Invalid request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UnauthorizedProblem:
+      description: Missing or invalid OAuth2 bearer token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ForbiddenProblem:
+      description: mTLS or authorization requirement failed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ConflictProblem:
+      description: Request conflicts with OTK or certificate state.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    InternalProblem:
+      description: Internal server error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  schemas:
+    OtkIssueRequest:
+      type: object
+      required:
+        - appInstanceId
+        - deviceId
+        - certificateProfile
+      properties:
+        appInstanceId:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          minLength: 1
+        certificateProfile:
+          type: string
+          enum:
+            - quantum-bank-mobile-client-v1
+    OtkIssueResponse:
+      type: object
+      required:
+        - otk
+        - expiresAt
+        - correlationId
+      properties:
+        otk:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+    CsrSubmitRequest:
+      type: object
+      required:
+        - otk
+        - csr
+        - appInstanceId
+        - deviceId
+        - certificateProfile
+      properties:
+        otk:
+          type: string
+        csr:
+          type: string
+          description: PEM encoded certificate signing request.
+        appInstanceId:
+          type: string
+        deviceId:
+          type: string
+        certificateProfile:
+          type: string
+          enum:
+            - quantum-bank-mobile-client-v1
+    CsrSubmitResponse:
+      type: object
+      required:
+        - certificate
+        - certificateChain
+        - expiresAt
+        - correlationId
+      properties:
+        certificate:
+          type: string
+          description: PEM encoded client certificate.
+        certificateChain:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+    PixTransferRequest:
+      type: object
+      required:
+        - amount
+        - recipientKey
+        - scenario
+      properties:
+        amount:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+        recipientKey:
+          type: string
+        description:
+          type: string
+        scenario:
+          type: string
+          enum:
+            - SUCCESS
+            - ERROR
+    PixTransferSuccessResponse:
+      type: object
+      required:
+        - transactionId
+        - status
+        - amount
+        - createdAt
+        - correlationId
+      properties:
+        transactionId:
+          type: string
+        status:
+          type: string
+          enum:
+            - COMPLETED
+        amount:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+    StatementResponse:
+      type: object
+      required:
+        - accountId
+        - entries
+        - correlationId
+      properties:
+        accountId:
+          type: string
+        entries:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - postedAt
+              - description
+              - amount
+            properties:
+              id:
+                type: string
+              postedAt:
+                type: string
+                format: date-time
+              description:
+                type: string
+              amount:
+                type: number
+                format: double
+        correlationId:
+          type: string
+    ProfileResponse:
+      type: object
+      required:
+        - customerId
+        - name
+        - document
+        - email
+        - correlationId
+      properties:
+        customerId:
+          type: string
+        name:
+          type: string
+        document:
+          type: string
+        email:
+          type: string
+          format: email
+        correlationId:
+          type: string
+    ProblemDetails:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - errorCode
+        - correlationId
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        errorCode:
+          type: string
+        correlationId:
+          type: string
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+              message:
+                type: string

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://www.krakend.io/schema/v3.json",
+  "version": 3,
+  "name": "quantum-bank-api-gateway",
+  "port": 8080,
+  "_phase3_mtls_placeholder": "Phase 3 configures app-to-gateway and gateway-to-backend mTLS. Phase 2 enforces OAuth2 JWT validation and endpoint scopes.",
+  "endpoints": [
+    {
+      "endpoint": "/auth/otk",
+      "method": "POST",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "openid",
+            "profile"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "http://backend:8080"
+          ],
+          "url_pattern": "/auth/otk",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/csr",
+      "method": "POST",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "openid",
+            "profile"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "http://backend:8080"
+          ],
+          "url_pattern": "/auth/csr",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/pix/transfers",
+      "method": "POST",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "pix:write"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "http://backend:8080"
+          ],
+          "url_pattern": "/pix/transfers",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/statements",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "statements:read"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "http://backend:8080"
+          ],
+          "url_pattern": "/statements",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/profile",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "profile:read"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "http://backend:8080"
+          ],
+          "url_pattern": "/profile",
+          "method": "GET"
+        }
+      ]
+    }
+  ]
+}

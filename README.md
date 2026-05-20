@@ -17,3 +17,10 @@ The API Gateway owns and consumes these Phase 1 contracts:
 - [Quantum Bank OpenAPI v1](openapi/quantum-bank-v1.yaml) for the CONT-02 app-facing route and schema source of truth.
 
 Later KrakenD implementation must keep mobile traffic on public gateway paths and must not own certificate issuance, renewal, or revocation.
+
+## Phase 2 OAuth2 Gateway Policy
+
+Phase 2 adds the local JWT authorization policy for the app-facing gateway.
+
+- [OAuth2 Gateway Policy Contract](docs/contracts/oauth2-gateway-policy.md) documents AUTH-02 issuer, audience, scope, negative-token, and problem-details expectations.
+- [krakend.json](krakend.json) contains the source-level KrakenD JWT validator policy for the Phase 1 route surface.

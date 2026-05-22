@@ -4,10 +4,17 @@
   "name": "quantum-bank-bootstrap-gateway",
   "port": 8080,
   "tls": {
-    "public_key": "/etc/krakend/tls/gateway-server.crt",
-    "private_key": "/etc/krakend/tls/gateway-server.key"
+    "keys": [
+      {
+        "public_key": "/etc/krakend/tls/gateway-server.crt",
+        "private_key": "/etc/krakend/tls/gateway-server.key"
+      }
+    ]
   },
   "client_tls": {
+    "ca_certs": [
+      "/etc/krakend/trust/issuing-ca.crt"
+    ],
     "client_certs": [
       {
         "certificate": "/etc/krakend/tls/gateway-client.crt",

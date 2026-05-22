@@ -38,3 +38,11 @@ app has a client certificate, while protected banking traffic must require one.
   entrypoint and documents the split.
 - Missing or untrusted app certificates on banking routes fail during TLS
   handshake before HTTP problem details are available.
+
+## Phase 6 Docker Runtime
+
+The gateway has a [Dockerfile](Dockerfile) based on the official KrakenD image
+with the bootstrap and banking configs copied into `/etc/krakend`. Compose runs
+two gateway services from the same image: bootstrap on `8080` and banking on
+`8443`. Both services mount PKI-owned runtime TLS material, and the banking
+listener requires app-to-gateway mTLS.

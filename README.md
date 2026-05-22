@@ -24,3 +24,17 @@ Phase 2 adds the local JWT authorization policy for the app-facing gateway.
 
 - [OAuth2 Gateway Policy Contract](docs/contracts/oauth2-gateway-policy.md) documents AUTH-02 issuer, audience, scope, negative-token, and problem-details expectations.
 - [krakend.json](krakend.json) contains the source-level KrakenD JWT validator policy for the Phase 1 route surface.
+
+## Phase 3 mTLS Gateway Split
+
+Phase 3 uses two KrakenD configs because bootstrap must work before the mobile
+app has a client certificate, while protected banking traffic must require one.
+
+- [krakend-bootstrap.json](krakend-bootstrap.json) exposes `/auth/otk` and
+  `/auth/csr` on `8080` with OAuth2Bearer and gateway-to-backend `client_tls`.
+- [krakend-banking.json](krakend-banking.json) exposes `/pix/transfers`,
+  `/statements`, and `/profile` on `8443` with OAuth2Bearer plus mTLS.
+- [krakend.json](krakend.json) remains a bootstrap-compatible compatibility
+  entrypoint and documents the split.
+- Missing or untrusted app certificates on banking routes fail during TLS
+  handshake before HTTP problem details are available.

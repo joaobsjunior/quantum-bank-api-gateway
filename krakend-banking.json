@@ -1,12 +1,15 @@
 {
   "$schema": "https://www.krakend.io/schema/v3.json",
   "version": 3,
-  "name": "quantum-bank-api-gateway-bootstrap-compat",
-  "port": 8080,
-  "_phase3_mtls_note": "Compatibility entrypoint only. Phase 3 uses krakend-bootstrap.json for OAuth2-only bootstrap and krakend-banking.json for OAuth2 plus app-to-gateway mTLS banking routes.",
+  "name": "quantum-bank-banking-gateway",
+  "port": 8443,
   "tls": {
     "public_key": "/etc/krakend/tls/gateway-server.crt",
-    "private_key": "/etc/krakend/tls/gateway-server.key"
+    "private_key": "/etc/krakend/tls/gateway-server.key",
+    "enable_mtls": true,
+    "ca_certs": [
+      "/etc/krakend/trust/issuing-ca.crt"
+    ]
   },
   "client_tls": {
     "client_certs": [
@@ -18,7 +21,7 @@
   },
   "endpoints": [
     {
-      "endpoint": "/auth/otk",
+      "endpoint": "/pix/transfers",
       "method": "POST",
       "extra_config": {
         "auth/validator": {
@@ -33,8 +36,7 @@
           "roles_key": "scope",
           "roles_key_is_nested": false,
           "roles": [
-            "openid",
-            "profile"
+            "pix:write"
           ],
           "operation_debug": false
         }
@@ -44,14 +46,14 @@
           "host": [
             "https://backend:8080"
           ],
-          "url_pattern": "/auth/otk",
+          "url_pattern": "/pix/transfers",
           "method": "POST"
         }
       ]
     },
     {
-      "endpoint": "/auth/csr",
-      "method": "POST",
+      "endpoint": "/statements",
+      "method": "GET",
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
@@ -65,8 +67,7 @@
           "roles_key": "scope",
           "roles_key_is_nested": false,
           "roles": [
-            "openid",
-            "profile"
+            "statements:read"
           ],
           "operation_debug": false
         }
@@ -76,8 +77,39 @@
           "host": [
             "https://backend:8080"
           ],
-          "url_pattern": "/auth/csr",
-          "method": "POST"
+          "url_pattern": "/statements",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/profile",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "profile:read"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "https://backend:8080"
+          ],
+          "url_pattern": "/profile",
+          "method": "GET"
         }
       ]
     }

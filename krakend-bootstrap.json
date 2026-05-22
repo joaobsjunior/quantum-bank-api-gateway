@@ -1,9 +1,8 @@
 {
   "$schema": "https://www.krakend.io/schema/v3.json",
   "version": 3,
-  "name": "quantum-bank-api-gateway-bootstrap-compat",
+  "name": "quantum-bank-bootstrap-gateway",
   "port": 8080,
-  "_phase3_mtls_note": "Compatibility entrypoint only. Phase 3 uses krakend-bootstrap.json for OAuth2-only bootstrap and krakend-banking.json for OAuth2 plus app-to-gateway mTLS banking routes.",
   "tls": {
     "public_key": "/etc/krakend/tls/gateway-server.crt",
     "private_key": "/etc/krakend/tls/gateway-server.key"

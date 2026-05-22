@@ -39,8 +39,7 @@
           "scopes_key": "scope",
           "scopes_matcher": "all",
           "scopes": [
-            "openid",
-            "profile"
+            "profile:read"
           ],
           "operation_debug": false
         }
@@ -77,8 +76,7 @@
           "scopes_key": "scope",
           "scopes_matcher": "all",
           "scopes": [
-            "openid",
-            "profile"
+            "profile:read"
           ],
           "operation_debug": false
         }

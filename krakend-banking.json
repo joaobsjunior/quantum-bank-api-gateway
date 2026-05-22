@@ -12,12 +12,12 @@
     ],
     "enable_mtls": true,
     "ca_certs": [
-      "/etc/krakend/trust/issuing-ca.crt"
+      "/etc/krakend/trust/root-ca.crt"
     ]
   },
   "client_tls": {
     "ca_certs": [
-      "/etc/krakend/trust/issuing-ca.crt"
+      "/etc/krakend/trust/root-ca.crt"
     ],
     "client_certs": [
       {
@@ -39,10 +39,10 @@
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": false,
-          "roles_key": "scope",
-          "roles_key_is_nested": false,
-          "roles": [
+          "disable_jwk_security": true,
+          "scopes_key": "scope",
+          "scopes_matcher": "all",
+          "scopes": [
             "pix:write"
           ],
           "operation_debug": false
@@ -70,10 +70,10 @@
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": false,
-          "roles_key": "scope",
-          "roles_key_is_nested": false,
-          "roles": [
+          "disable_jwk_security": true,
+          "scopes_key": "scope",
+          "scopes_matcher": "all",
+          "scopes": [
             "statements:read"
           ],
           "operation_debug": false
@@ -101,10 +101,10 @@
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": false,
-          "roles_key": "scope",
-          "roles_key_is_nested": false,
-          "roles": [
+          "disable_jwk_security": true,
+          "scopes_key": "scope",
+          "scopes_matcher": "all",
+          "scopes": [
             "profile:read"
           ],
           "operation_debug": false
@@ -132,10 +132,10 @@
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": false,
-          "roles_key": "scope",
-          "roles_key_is_nested": false,
-          "roles": [
+          "disable_jwk_security": true,
+          "scopes_key": "scope",
+          "scopes_matcher": "all",
+          "scopes": [
             "profile:write"
           ],
           "operation_debug": false

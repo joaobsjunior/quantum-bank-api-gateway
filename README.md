@@ -46,3 +46,7 @@ with the bootstrap and banking configs copied into `/etc/krakend`. Compose runs
 two gateway services from the same image: bootstrap on `8080` and banking on
 `8443`. Both services mount PKI-owned runtime TLS material, and the banking
 listener requires app-to-gateway mTLS.
+
+The local Keycloak issuer uses HTTP inside the Compose network, so the KrakenD
+JWT validators explicitly allow local insecure JWKS retrieval. Production
+deployment configs must replace that with HTTPS issuer/JWKS endpoints.

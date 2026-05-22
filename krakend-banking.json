@@ -112,6 +112,37 @@
           "method": "GET"
         }
       ]
+    },
+    {
+      "endpoint": "/profile",
+      "method": "PUT",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "audience": [
+            "quantum-bank-api"
+          ],
+          "cache": true,
+          "disable_jwk_security": false,
+          "roles_key": "scope",
+          "roles_key_is_nested": false,
+          "roles": [
+            "profile:write"
+          ],
+          "operation_debug": false
+        }
+      },
+      "backend": [
+        {
+          "host": [
+            "https://backend:8080"
+          ],
+          "url_pattern": "/profile",
+          "method": "PUT"
+        }
+      ]
     }
   ]
 }

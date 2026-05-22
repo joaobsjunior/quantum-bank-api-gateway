@@ -169,6 +169,37 @@ paths:
           $ref: '#/components/responses/ForbiddenProblem'
         "500":
           $ref: '#/components/responses/InternalProblem'
+    put:
+      tags: [Profile]
+      summary: Edit customer registration data.
+      operationId: updateProfile
+      x-required-scopes:
+        - profile:write
+      security:
+        - OAuth2Bearer: []
+          MutualTLS: []
+      x-listener: banking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        "200":
+          description: Updated customer profile data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        "400":
+          $ref: '#/components/responses/BadRequestProblem'
+        "401":
+          $ref: '#/components/responses/UnauthorizedProblem'
+        "403":
+          $ref: '#/components/responses/ForbiddenProblem'
+        "500":
+          $ref: '#/components/responses/InternalProblem'
 components:
   securitySchemes:
     OAuth2Bearer:
@@ -359,23 +390,53 @@ components:
     ProfileResponse:
       type: object
       required:
-        - customerId
-        - name
-        - document
+        - subject
+        - fullName
         - email
+        - phone
+        - documentNumber
+        - address
+        - updatedAt
         - correlationId
       properties:
-        customerId:
+        subject:
           type: string
-        name:
+        fullName:
           type: string
-        document:
+        documentNumber:
           type: string
         email:
           type: string
           format: email
+        phone:
+          type: string
+        address:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
         correlationId:
           type: string
+    ProfileUpdateRequest:
+      type: object
+      required:
+        - fullName
+        - email
+        - phone
+        - address
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 1
+        address:
+          type: string
+          minLength: 1
     ProblemDetails:
       type: object
       required:

@@ -54,9 +54,15 @@
             "https://backend:8080"
           ],
           "url_pattern": "/pix/transfers",
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
-      ]
+      ],
+      "input_headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "output_encoding": "no-op"
     },
     {
       "endpoint": "/statements",
@@ -85,9 +91,15 @@
             "https://backend:8080"
           ],
           "url_pattern": "/statements",
-          "method": "GET"
+          "method": "GET",
+          "encoding": "no-op"
         }
-      ]
+      ],
+      "input_headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "output_encoding": "no-op"
     },
     {
       "endpoint": "/profile",
@@ -116,9 +128,15 @@
             "https://backend:8080"
           ],
           "url_pattern": "/profile",
-          "method": "GET"
+          "method": "GET",
+          "encoding": "no-op"
         }
-      ]
+      ],
+      "input_headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "output_encoding": "no-op"
     },
     {
       "endpoint": "/profile",
@@ -147,9 +165,15 @@
             "https://backend:8080"
           ],
           "url_pattern": "/profile",
-          "method": "PUT"
+          "method": "PUT",
+          "encoding": "no-op"
         }
-      ]
+      ],
+      "input_headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "output_encoding": "no-op"
     }
   ]
 }

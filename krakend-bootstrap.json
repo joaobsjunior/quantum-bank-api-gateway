@@ -51,9 +51,15 @@
             "https://backend:8080"
           ],
           "url_pattern": "/auth/otk",
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
-      ]
+      ],
+      "input_headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "output_encoding": "no-op"
     },
     {
       "endpoint": "/auth/csr",
@@ -83,9 +89,15 @@
             "https://backend:8080"
           ],
           "url_pattern": "/auth/csr",
-          "method": "POST"
+          "method": "POST",
+          "encoding": "no-op"
         }
-      ]
+      ],
+      "input_headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "output_encoding": "no-op"
     }
   ]
 }

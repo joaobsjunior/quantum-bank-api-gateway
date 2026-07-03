@@ -50,3 +50,11 @@ listener requires app-to-gateway mTLS.
 The local Keycloak issuer uses HTTP inside the Compose network, so the KrakenD
 JWT validators explicitly allow local insecure JWKS retrieval. Production
 deployment configs must replace that with HTTPS issuer/JWKS endpoints.
+
+## Testing & CI
+
+- Validate gateway config locally: `./scripts/ci-validate.sh` runs `krakend
+  check` on every config (via local binary or the `krakend/krakend:2.13` Docker
+  image) plus `scripts/verify-bootstrap-scopes.sh`.
+- CI (`.github/workflows/ci.yml`) runs the same validation gate on every push/PR
+  to `main`.

@@ -58,3 +58,19 @@ deployment configs must replace that with HTTPS issuer/JWKS endpoints.
   image) plus `scripts/verify-bootstrap-scopes.sh`.
 - CI (`.github/workflows/ci.yml`) runs the same validation gate on every push/PR
   to `main`.
+
+## Runtime Requirements
+
+KrakenD runs as a small, statically-compiled Go binary, so both gateway
+listeners are the lightest services in the stack.
+
+| Resource | Per listener |
+| --- | --- |
+| Memory | ~30–120 MB |
+| CPU | 0.25–0.5 vCPU (event-driven; scales with request load) |
+| Storage | image ~70 MB (shared by both listeners) + config + read-only TLS mounts |
+
+- Compose runs two containers from the same image (`gateway-bootstrap` on `8080`,
+  `gateway-banking` on `8443`), so the image is pulled only once.
+- Stateless: no persistent volume, only read-only config and PKI TLS/trust mounts.
+- Suggested container limit for local runs: `--memory=256m --cpus=0.5`.

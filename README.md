@@ -61,16 +61,25 @@ deployment configs must replace that with HTTPS issuer/JWKS endpoints.
 
 ## Runtime Requirements
 
-KrakenD runs as a small, statically-compiled Go binary, so both gateway
-listeners are the lightest services in the stack.
+KrakenD is the lightest part of the stack (a small Go binary).
 
-| Resource | Per listener |
+### Recommended configuration
+
+**Per gateway listener:**
+
+| Resource | Recommended |
 | --- | --- |
-| Memory | ~30–120 MB |
-| CPU | 0.25–0.5 vCPU (event-driven; scales with request load) |
-| Storage | image ~70 MB (shared by both listeners) + config + read-only TLS mounts |
+| Memory | **256 MB** |
+| CPU | **0.5 vCPU** |
+| Disk | **~70 MB** image (shared by both listeners) |
 
-- Compose runs two containers from the same image (`gateway-bootstrap` on `8080`,
-  `gateway-banking` on `8443`), so the image is pulled only once.
-- Stateless: no persistent volume, only read-only config and PKI TLS/trust mounts.
-- Suggested container limit for local runs: `--memory=256m --cpus=0.5`.
+Docker equivalent per listener: `--memory=256m --cpus=0.5`.
+
+Compose starts **two** listeners from the same image — `gateway-bootstrap`
+(8080) and `gateway-banking` (8443) — so budget **~512 MB RAM and ~1 vCPU total**
+for both.
+
+### Good to know
+
+- The image is pulled only once and shared by both listeners.
+- Stateless: no data volume, only read-only config and PKI TLS/trust mounts.

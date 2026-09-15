@@ -13,11 +13,11 @@ KrakenD validates tokens from the local Keycloak realm `quantum-bank-local`.
 
 Container-network issuer:
 
-- `http://keycloak:8080/realms/quantum-bank-local`
+- `https://keycloak:8443/realms/quantum-bank-local`
 
 Container-network JWKS:
 
-- `http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs`
+- `https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs`
 
 Accepted audience:
 

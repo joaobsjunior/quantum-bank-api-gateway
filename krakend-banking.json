@@ -3,6 +3,10 @@
   "version": 3,
   "name": "quantum-bank-banking-gateway",
   "port": 8443,
+  "timeout": "10s",
+  "read_header_timeout": "5s",
+  "read_timeout": "15s",
+  "idle_timeout": "60s",
   "tls": {
     "keys": [
       {
@@ -10,6 +14,7 @@
         "private_key": "/etc/krakend/tls/gateway-server.key"
       }
     ],
+    "min_version": "TLS13",
     "enable_mtls": true,
     "ca_certs": [
       "/etc/krakend/trust/root-ca.crt"
@@ -26,26 +31,53 @@
       }
     ]
   },
+  "extra_config": {
+    "security/http": {
+      "frame_deny": true,
+      "content_type_nosniff": true,
+      "browser_xss_filter": true,
+      "sts_seconds": 31536000,
+      "sts_include_subdomains": true,
+      "referrer_policy": "no-referrer"
+    },
+    "router": {
+      "disable_health": false,
+      "hide_version_header": true,
+      "logger_skip_paths": [
+        "/__health"
+      ]
+    }
+  },
   "endpoints": [
     {
       "endpoint": "/pix/transfers",
       "method": "POST",
+      "timeout": "10s",
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
-          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "jwk_url": "https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "jwk_local_ca": "/etc/krakend/trust/root-ca.crt",
+          "issuer": "https://keycloak:8443/realms/quantum-bank-local",
           "audience": [
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": true,
+          "cache_duration": 900,
           "scopes_key": "scope",
           "scopes_matcher": "all",
           "scopes": [
             "pix:write"
           ],
           "operation_debug": false
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "capacity": 100,
+          "client_max_rate": 10,
+          "client_capacity": 10,
+          "strategy": "ip",
+          "every": "1s"
         }
       },
       "backend": [
@@ -60,29 +92,40 @@
       ],
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "X-Correlation-Id"
       ],
       "output_encoding": "no-op"
     },
     {
       "endpoint": "/statements",
       "method": "GET",
+      "timeout": "10s",
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
-          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "jwk_url": "https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "jwk_local_ca": "/etc/krakend/trust/root-ca.crt",
+          "issuer": "https://keycloak:8443/realms/quantum-bank-local",
           "audience": [
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": true,
+          "cache_duration": 900,
           "scopes_key": "scope",
           "scopes_matcher": "all",
           "scopes": [
             "statements:read"
           ],
           "operation_debug": false
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 200,
+          "capacity": 200,
+          "client_max_rate": 20,
+          "client_capacity": 20,
+          "strategy": "ip",
+          "every": "1s"
         }
       },
       "backend": [
@@ -97,29 +140,40 @@
       ],
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "X-Correlation-Id"
       ],
       "output_encoding": "no-op"
     },
     {
       "endpoint": "/profile",
       "method": "GET",
+      "timeout": "10s",
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
-          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "jwk_url": "https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "jwk_local_ca": "/etc/krakend/trust/root-ca.crt",
+          "issuer": "https://keycloak:8443/realms/quantum-bank-local",
           "audience": [
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": true,
+          "cache_duration": 900,
           "scopes_key": "scope",
           "scopes_matcher": "all",
           "scopes": [
             "profile:read"
           ],
           "operation_debug": false
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 200,
+          "capacity": 200,
+          "client_max_rate": 20,
+          "client_capacity": 20,
+          "strategy": "ip",
+          "every": "1s"
         }
       },
       "backend": [
@@ -134,29 +188,40 @@
       ],
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "X-Correlation-Id"
       ],
       "output_encoding": "no-op"
     },
     {
       "endpoint": "/profile",
       "method": "PUT",
+      "timeout": "10s",
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8080/realms/quantum-bank-local/protocol/openid-connect/certs",
-          "issuer": "http://keycloak:8080/realms/quantum-bank-local",
+          "jwk_url": "https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "jwk_local_ca": "/etc/krakend/trust/root-ca.crt",
+          "issuer": "https://keycloak:8443/realms/quantum-bank-local",
           "audience": [
             "quantum-bank-api"
           ],
           "cache": true,
-          "disable_jwk_security": true,
+          "cache_duration": 900,
           "scopes_key": "scope",
           "scopes_matcher": "all",
           "scopes": [
             "profile:write"
           ],
           "operation_debug": false
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 50,
+          "capacity": 50,
+          "client_max_rate": 5,
+          "client_capacity": 5,
+          "strategy": "ip",
+          "every": "1s"
         }
       },
       "backend": [
@@ -171,7 +236,8 @@
       ],
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "X-Correlation-Id"
       ],
       "output_encoding": "no-op"
     }

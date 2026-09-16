@@ -11,19 +11,17 @@ for config in krakend-bootstrap.json krakend.json; do
     exit 1
   fi
 
-  ruby -rjson - "${config_path}" <<'RUBY'
-config = JSON.parse(File.read(ARGV.fetch(0)))
-bootstrap_endpoints = config.fetch('endpoints').select { |endpoint| ['/auth/otk', '/auth/csr'].include?(endpoint.fetch('endpoint')) }
-abort 'bootstrap gateway config must define /auth/otk and /auth/csr' unless bootstrap_endpoints.size == 2
-
-bootstrap_endpoints.each do |endpoint|
-  validator = endpoint.fetch('extra_config').fetch('auth/validator')
-  scopes = validator.fetch('scopes')
-  unless scopes == ['profile:read']
-    abort "#{endpoint.fetch('endpoint')} must require only profile:read for local mobile bootstrap tokens, got #{scopes.inspect}"
-  end
-end
-RUBY
+  python3 - "${config_path}" <<'PY'
+import json, sys
+config = json.load(open(sys.argv[1]))
+bootstrap_endpoints = [e for e in config["endpoints"] if e["endpoint"] in ("/auth/otk", "/auth/csr")]
+if len(bootstrap_endpoints) != 2:
+    sys.exit("bootstrap gateway config must define /auth/otk and /auth/csr")
+for endpoint in bootstrap_endpoints:
+    scopes = endpoint["extra_config"]["auth/validator"]["scopes"]
+    if scopes != ["profile:read"]:
+        sys.exit(f"{endpoint['endpoint']} must require only profile:read for local mobile bootstrap tokens, got {scopes!r}")
+PY
 done
 
 echo "bootstrap-scopes-ok"

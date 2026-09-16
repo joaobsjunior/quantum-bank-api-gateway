@@ -39,6 +39,30 @@ app has a client certificate, while protected banking traffic must require one.
 - Missing or untrusted app certificates on banking routes fail during TLS
   handshake before HTTP problem details are available.
 
+## Post-Quantum TLS Terminators
+
+KrakenD is built on Go `crypto/tls`, which cannot terminate ML-DSA certificates
+nor verify ML-DSA-signed peers. The gateway layer therefore owns two artifacts:
+
+- [krakend-bootstrap.json](krakend-bootstrap.json) / [krakend-banking.json](krakend-banking.json):
+  KrakenD binds **`127.0.0.1` only** (`18080` / `18443`), carries no `tls` or
+  `client_tls` block, reaches the backend through `http://127.0.0.1:18081` and
+  the issuer JWKS through `http://127.0.0.1:18082`.
+- [tls/haproxy-bootstrap.cfg](tls/haproxy-bootstrap.cfg) / [tls/haproxy-banking.cfg](tls/haproxy-banking.cfg),
+  packaged by [Dockerfile.tls](Dockerfile.tls) (`haproxy:3.2-alpine`, OpenSSL
+  3.5): HAProxy shares the KrakenD network namespace, publishes `8080`/`8443`
+  with the PKI-issued ML-DSA-65 server certificate, negotiates only TLS 1.3 with
+  `X25519MLKEM768` and `mldsa65:mldsa87`, requires an ML-DSA client certificate
+  on the banking listener (failing inside the handshake otherwise), and
+  provides the loopback egress that presents the `gateway-client` ML-DSA
+  identity to the backend and verifies the issuer.
+
+Loopback traffic never leaves the network namespace; every socket that crosses
+a container or host boundary is post-quantum authenticated and encrypted.
+`scripts/verify-pqc-gateway.sh` enforces the policy statically and
+`scripts/ci-validate.sh` also runs `haproxy -c` against freshly generated
+ML-DSA material.
+
 ## Phase 6 Docker Runtime
 
 The gateway has a [Dockerfile](Dockerfile) based on the official KrakenD image
@@ -47,15 +71,18 @@ two gateway services from the same image: bootstrap on `8080` and banking on
 `8443`. Both services mount PKI-owned runtime TLS material, and the banking
 listener requires app-to-gateway mTLS.
 
-The local Keycloak issuer uses HTTP inside the Compose network, so the KrakenD
-JWT validators explicitly allow local insecure JWKS retrieval. Production
-deployment configs must replace that with HTTPS issuer/JWKS endpoints.
+JWKS retrieval leaves KrakenD as plain HTTP to the loopback egress
+`127.0.0.1:18082`, where HAProxy authenticates the issuer with its ML-DSA
+certificate; `disable_jwk_security` is allowed only for that loopback URL and
+checked by `scripts/verify-pqc-gateway.sh`.
 
 ## Testing & CI
 
 - Validate gateway config locally: `./scripts/ci-validate.sh` runs `krakend
-  check` on every config (via local binary or the `krakend/krakend:2.13` Docker
-  image) plus `scripts/verify-bootstrap-scopes.sh`.
+  check` on every config (via local binary or the `krakend:2.13.4` Docker
+  image), `haproxy -c` on both terminator configs with generated ML-DSA
+  material, `scripts/verify-bootstrap-scopes.sh` and
+  `scripts/verify-pqc-gateway.sh`.
 - CI (`.github/workflows/ci.yml`) runs the same validation gate on every push/PR
   to `main`.
 
@@ -71,7 +98,7 @@ KrakenD is the lightest part of the stack (a small Go binary).
 | --- | --- |
 | Memory | **256 MB** |
 | CPU | **0.5 vCPU** |
-| Disk | **~70 MB** image (shared by both listeners) |
+| Disk | **~70 MB** KrakenD image + **~25 MB** HAProxy terminator image (shared by both listeners) |
 
 Docker equivalent per listener: `--memory=256m --cpus=0.5`.
 

@@ -1,0 +1,14 @@
+# Post-quantum TLS terminator for the KrakenD listeners.
+#
+# HAProxy on Alpine 3.24 links OpenSSL 3.5 (native ML-DSA / ML-KEM). It runs
+# in the same network namespace as the KrakenD container (compose
+# `network_mode: service:<gateway>`) and owns every TLS socket of the gateway
+# layer; KrakenD itself only listens on loopback. See tls/haproxy-*.cfg.
+FROM haproxy:3.2-alpine
+
+COPY tls/haproxy-bootstrap.cfg tls/haproxy-banking.cfg /usr/local/etc/haproxy/
+
+# Configuration is selected per Compose service:
+#   haproxy -f /usr/local/etc/haproxy/haproxy-bootstrap.cfg
+#   haproxy -f /usr/local/etc/haproxy/haproxy-banking.cfg
+EXPOSE 8080 8443

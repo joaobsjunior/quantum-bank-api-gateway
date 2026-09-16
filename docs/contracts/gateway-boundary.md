@@ -35,6 +35,15 @@ or invalid bearer tokens before routing to backend services.
 Backend services may still validate caller context, but the public app boundary
 for JWT enforcement belongs to KrakenD.
 
+## Post-Quantum Transport
+
+Every gateway socket that crosses a container or host boundary is TLS 1.3 with
+ML-DSA peer authentication and `X25519MLKEM768` key exchange, owned by the
+HAProxy terminator that shares the KrakenD network namespace (KrakenD itself
+binds loopback only). Classical signature schemes and classical-only groups are
+refused on the listening and the connecting side; a missing, untrusted, expired
+or classical client certificate fails inside the handshake.
+
 ## mTLS Boundaries
 
 Phase 3 configures app-to-gateway and gateway-to-backend mTLS.

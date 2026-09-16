@@ -2,31 +2,13 @@
   "$schema": "https://www.krakend.io/schema/v3.json",
   "version": 3,
   "name": "quantum-bank-api-gateway-bootstrap-compat",
-  "port": 8080,
+  "_pqc_transport_note": "KrakenD listens on loopback only. The post-quantum HAProxy terminator in the same network namespace (tls/haproxy-*.cfg) owns every TLS socket: ML-DSA certificates, X25519MLKEM768 key exchange, app-to-gateway mTLS on the banking listener and gateway-to-backend mTLS on 127.0.0.1:18081. Go crypto/tls has no ML-DSA support, so KrakenD must not terminate TLS itself.",
+  "listen_ip": "127.0.0.1",
+  "port": 18080,
   "timeout": "10s",
   "read_header_timeout": "5s",
   "read_timeout": "15s",
   "idle_timeout": "60s",
-  "tls": {
-    "keys": [
-      {
-        "public_key": "/etc/krakend/tls/gateway-server.crt",
-        "private_key": "/etc/krakend/tls/gateway-server.key"
-      }
-    ],
-    "min_version": "TLS13"
-  },
-  "client_tls": {
-    "ca_certs": [
-      "/etc/krakend/trust/root-ca.crt"
-    ],
-    "client_certs": [
-      {
-        "certificate": "/etc/krakend/tls/gateway-client.crt",
-        "private_key": "/etc/krakend/tls/gateway-client.key"
-      }
-    ]
-  },
   "extra_config": {
     "security/http": {
       "frame_deny": true,
@@ -44,7 +26,7 @@
       ]
     }
   },
-  "_phase3_mtls_note": "Compatibility entrypoint only. Phase 3 uses krakend-bootstrap.json for OAuth2-only bootstrap and krakend-banking.json for OAuth2 plus app-to-gateway mTLS banking routes.",
+  "_phase3_mtls_note": "Compatibility entrypoint only. Phase 3 uses krakend-bootstrap.json for OAuth2-only bootstrap and krakend-banking.json for OAuth2 plus app-to-gateway mTLS banking routes (mTLS is enforced by the HAProxy terminator).",
   "endpoints": [
     {
       "endpoint": "/auth/otk",
@@ -53,8 +35,8 @@
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs",
-          "jwk_local_ca": "/etc/krakend/trust/root-ca.crt",
+          "jwk_url": "http://127.0.0.1:18082/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "disable_jwk_security": true,
           "issuer": "https://keycloak:8443/realms/quantum-bank-local",
           "audience": [
             "quantum-bank-api"
@@ -63,10 +45,10 @@
           "cache_duration": 900,
           "scopes_key": "scope",
           "scopes_matcher": "all",
+          "operation_debug": false,
           "scopes": [
             "profile:read"
-          ],
-          "operation_debug": false
+          ]
         },
         "qos/ratelimit/router": {
           "max_rate": 20,
@@ -80,7 +62,7 @@
       "backend": [
         {
           "host": [
-            "https://backend:8080"
+            "http://127.0.0.1:18081"
           ],
           "url_pattern": "/auth/otk",
           "method": "POST",
@@ -101,8 +83,8 @@
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "https://keycloak:8443/realms/quantum-bank-local/protocol/openid-connect/certs",
-          "jwk_local_ca": "/etc/krakend/trust/root-ca.crt",
+          "jwk_url": "http://127.0.0.1:18082/realms/quantum-bank-local/protocol/openid-connect/certs",
+          "disable_jwk_security": true,
           "issuer": "https://keycloak:8443/realms/quantum-bank-local",
           "audience": [
             "quantum-bank-api"
@@ -111,10 +93,10 @@
           "cache_duration": 900,
           "scopes_key": "scope",
           "scopes_matcher": "all",
+          "operation_debug": false,
           "scopes": [
             "profile:read"
-          ],
-          "operation_debug": false
+          ]
         },
         "qos/ratelimit/router": {
           "max_rate": 10,
@@ -128,7 +110,7 @@
       "backend": [
         {
           "host": [
-            "https://backend:8080"
+            "http://127.0.0.1:18081"
           ],
           "url_pattern": "/auth/csr",
           "method": "POST",

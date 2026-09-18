@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Static post-quantum transport policy for the gateway layer.
+# Static transport policy for the gateway layer.
 #
 # - KrakenD never terminates TLS (Go crypto/tls has no ML-DSA): it binds to
 #   127.0.0.1 only, carries no `tls`/`client_tls` blocks, and every backend or
 #   JWKS URL it reaches is a loopback HAProxy egress.
-# - Each HAProxy terminator is TLS 1.3 only, negotiates X25519MLKEM768 only,
-#   accepts/produces ML-DSA-65/87 signature schemes only, and the banking
-#   listener requires a client certificate that chains to the local PKI.
+# - Each HAProxy terminator is TLS 1.3 only. Its global (egress) defaults are
+#   strict: X25519MLKEM768 only, ML-DSA-65/87 signature schemes only. The
+#   app-facing bind is a dual-identity listener: compatibility (ECDSA P-256)
+#   certificate first, ML-DSA-65 certificate second, hybrid group preferred
+#   with X25519 accepted, ML-DSA and ECDSA schemes accepted, RSA never. The
+#   banking listener requires a client certificate that chains to one of the
+#   two local PKI chains.
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${script_dir}/.." && pwd)"
@@ -76,7 +80,12 @@ for cfg in haproxy-bootstrap.cfg haproxy-banking.cfg; do
   for directive in ssl-default-bind-sigalgs ssl-default-bind-client-sigalgs ssl-default-server-sigalgs ssl-default-server-client-sigalgs; do
     require_line "${file}" "^\s*${directive} mldsa65:mldsa87$"
   done
-  forbid_line "${file}" 'rsa_|ecdsa_|ed25519|ed448|secp256r1|secp384r1|X25519:|:X25519|prime256v1'
+  # RSA and EdDSA never appear; classical curves only appear on the app-facing
+  # bind line (checked below), never in the global defaults or egress lines.
+  forbid_line "${file}" 'rsa_|ed25519|ed448|prime256v1'
+  forbid_line "${file}" '^\s*ssl-default-(bind|server)-curves .*X25519(:|$)'
+  forbid_line "${file}" '^\s*ssl-default-(bind|server)-(client-)?sigalgs .*ecdsa'
+  forbid_line "${file}" '^\s*server .*(curves|sigalgs|client-sigalgs) '
   forbid_line "${file}" 'verify (none|optional)'
   forbid_line "${file}" 'crt-ignore-err|ca-ignore-err'
   # Every outbound TLS hop verifies the peer against the PKI chain.
@@ -87,9 +96,13 @@ for cfg in haproxy-bootstrap.cfg haproxy-banking.cfg; do
   require_line "${file}" '^\s*bind 127\.0\.0\.1:18082$'
 done
 
-require_line "${repo_dir}/tls/haproxy-bootstrap.cfg" '^\s*bind :8080 ssl crt /etc/quantum-bank/tls/gateway-server\.pem alpn http/1\.1$'
+# App-facing binds: dual identity (compat first = no-SNI default, ML-DSA
+# second), hybrid group preferred with X25519 accepted, ML-DSA + ECDSA schemes.
+app_curves='curves X25519MLKEM768:X25519'
+app_sigalgs='sigalgs mldsa65:mldsa87:ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384'
+require_line "${repo_dir}/tls/haproxy-bootstrap.cfg" "^\s*bind :8080 ssl crt /etc/quantum-bank/tls/gateway-server-compat\.pem crt /etc/quantum-bank/tls/gateway-server\.pem ${app_curves} ${app_sigalgs} alpn http/1\.1$"
 require_line "${repo_dir}/tls/haproxy-bootstrap.cfg" '^\s*server krakend 127\.0\.0\.1:18080$'
-require_line "${repo_dir}/tls/haproxy-banking.cfg" '^\s*bind :8443 ssl crt /etc/quantum-bank/tls/gateway-server\.pem ca-file /etc/quantum-bank/tls/ca-chain\.crt verify required alpn http/1\.1$'
+require_line "${repo_dir}/tls/haproxy-banking.cfg" "^\s*bind :8443 ssl crt /etc/quantum-bank/tls/gateway-server-compat\.pem crt /etc/quantum-bank/tls/gateway-server\.pem ca-file /etc/quantum-bank/tls/ca-chain-all\.crt verify required ${app_curves} ${app_sigalgs} client-${app_sigalgs} alpn http/1\.1$"
 require_line "${repo_dir}/tls/haproxy-banking.cfg" '^\s*server krakend 127\.0\.0\.1:18443$'
 
 echo "pqc-gateway-ok"

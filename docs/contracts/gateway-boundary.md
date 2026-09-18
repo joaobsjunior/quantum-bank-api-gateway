@@ -35,14 +35,22 @@ or invalid bearer tokens before routing to backend services.
 Backend services may still validate caller context, but the public app boundary
 for JWT enforcement belongs to KrakenD.
 
-## Post-Quantum Transport
+## Transport Policy
 
-Every gateway socket that crosses a container or host boundary is TLS 1.3 with
-ML-DSA peer authentication and `X25519MLKEM768` key exchange, owned by the
-HAProxy terminator that shares the KrakenD network namespace (KrakenD itself
-binds loopback only). Classical signature schemes and classical-only groups are
-refused on the listening and the connecting side; a missing, untrusted, expired
-or classical client certificate fails inside the handshake.
+Every gateway socket that crosses a container or host boundary is TLS 1.3 owned
+by the HAProxy terminator that shares the KrakenD network namespace (KrakenD
+itself binds loopback only).
+
+- Egress (gateway to backend, gateway to issuer JWKS) is strict: ML-DSA peer
+  authentication and `X25519MLKEM768` key exchange only; classical signature
+  schemes and classical-only groups are refused.
+- The app-facing listeners serve a dual identity: the ML-DSA-65 certificate to
+  clients that only offer ML-DSA schemes, the ECDSA P-256 compatibility
+  certificate to clients whose TLS stack cannot verify ML-DSA yet. The hybrid
+  group is preferred and `X25519` accepted; RSA is refused. On the banking
+  listener a missing, untrusted, expired, RSA or ML-DSA-44 client certificate
+  fails inside the handshake; ML-DSA-65/87 and ECDSA P-256 client certificates
+  from the respective PKI chain are accepted.
 
 ## mTLS Boundaries
 

@@ -37,7 +37,8 @@ for config in krakend.json krakend-bootstrap.json krakend-banking.json; do
 done
 
 # HAProxy validates certificate files at config-check time, so generate a
-# throwaway ML-DSA chain (root ML-DSA-87, leaves ML-DSA-65) with OpenSSL >= 3.5.
+# throwaway ML-DSA chain (root ML-DSA-87, leaves ML-DSA-65) and a throwaway
+# ECDSA compatibility chain (root P-384, leaf P-256) with OpenSSL >= 3.5.
 tls_dir="$(mktemp -d "${TMPDIR:-/tmp}/quantum-bank-gateway-tls.XXXXXX")"
 trap 'rm -rf "${tls_dir}"' EXIT
 chmod 755 "${tls_dir}"
@@ -53,6 +54,14 @@ for leaf in gateway-server gateway-client; do
   openssl x509 -req -in "${leaf}.csr" -CA ca-chain.crt -CAkey root.key -CAcreateserial -days 1 -out "${leaf}.crt"
   cat "${leaf}.crt" "${leaf}.key" > "${leaf}.pem"
 done
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-384 -out root-compat.key
+openssl req -x509 -new -key root-compat.key -sha384 -days 1 -out ca-chain-compat.crt -subj "/CN=ci-compat-root" \
+  -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out gateway-server-compat.key
+openssl req -new -key gateway-server-compat.key -out gateway-server-compat.csr -subj "/CN=gateway-server-compat"
+openssl x509 -req -in gateway-server-compat.csr -sha384 -CA ca-chain-compat.crt -CAkey root-compat.key -CAcreateserial -days 1 -out gateway-server-compat.crt
+cat gateway-server-compat.crt gateway-server-compat.key > gateway-server-compat.pem
+cat ca-chain.crt ca-chain-compat.crt > ca-chain-all.crt
 GEN
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
   -v "${tls_dir}:${tls_dir}" -w "${tls_dir}" --entrypoint sh \

@@ -39,7 +39,7 @@ app has a client certificate, while protected banking traffic must require one.
 - Missing or untrusted app certificates on banking routes fail during TLS
   handshake before HTTP problem details are available.
 
-## Post-Quantum TLS Terminators
+## TLS Terminators (post-quantum first, compatibility at the app edge)
 
 KrakenD is built on Go `crypto/tls`, which cannot terminate ML-DSA certificates
 nor verify ML-DSA-signed peers. The gateway layer therefore owns two artifacts:
@@ -50,18 +50,26 @@ nor verify ML-DSA-signed peers. The gateway layer therefore owns two artifacts:
   the issuer JWKS through `http://127.0.0.1:18082`.
 - [tls/haproxy-bootstrap.cfg](tls/haproxy-bootstrap.cfg) / [tls/haproxy-banking.cfg](tls/haproxy-banking.cfg),
   packaged by [Dockerfile.tls](Dockerfile.tls) (`haproxy:3.2-alpine`, OpenSSL
-  3.5): HAProxy shares the KrakenD network namespace, publishes `8080`/`8443`
-  with the PKI-issued ML-DSA-65 server certificate, negotiates only TLS 1.3 with
-  `X25519MLKEM768` and `mldsa65:mldsa87`, requires an ML-DSA client certificate
-  on the banking listener (failing inside the handshake otherwise), and
-  provides the loopback egress that presents the `gateway-client` ML-DSA
-  identity to the backend and verifies the issuer.
+  3.5): HAProxy shares the KrakenD network namespace and publishes
+  `8080`/`8443`.
+
+Two listener classes exist in every terminator:
+
+| Class | Where | Policy |
+| --- | --- | --- |
+| App-facing bind (`:8080`, `:8443`) | mobile app, browsers, `backend-client` | TLS 1.3; dual identity selected by the client's `signature_algorithms`: the PKI-issued **ML-DSA-65** certificate for clients that only offer ML-DSA schemes, the **ECDSA P-256** compatibility certificate for clients whose TLS stack cannot verify ML-DSA yet (Dart/BoringSSL, browsers); `X25519MLKEM768` preferred, `X25519` accepted; `mldsa65:mldsa87` and `ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384` accepted; RSA refused. The banking bind requires a client certificate from either PKI chain, failing inside the handshake otherwise. |
+| Egress `server` lines (`backend:8080`, `keycloak:8443`) | gateway → backend (mTLS with the `gateway-client` ML-DSA identity), gateway → issuer JWKS | strict: TLS 1.3, `X25519MLKEM768` only, `mldsa65:mldsa87` only. |
+
+The compatibility certificate is listed first on the bind so it is also the
+default for clients that send no SNI (IP-literal origins); ML-DSA-only clients
+must therefore connect by hostname, which every service does.
 
 Loopback traffic never leaves the network namespace; every socket that crosses
-a container or host boundary is post-quantum authenticated and encrypted.
+a container or host boundary is authenticated by a PKI-issued certificate and,
+wherever the peer can, post-quantum key-exchanged.
 `scripts/verify-pqc-gateway.sh` enforces the policy statically and
 `scripts/ci-validate.sh` also runs `haproxy -c` against freshly generated
-ML-DSA material.
+material of both chains.
 
 ## Phase 6 Docker Runtime
 
@@ -72,16 +80,16 @@ two gateway services from the same image: bootstrap on `8080` and banking on
 listener requires app-to-gateway mTLS.
 
 JWKS retrieval leaves KrakenD as plain HTTP to the loopback egress
-`127.0.0.1:18082`, where HAProxy authenticates the issuer with its ML-DSA
-certificate; `disable_jwk_security` is allowed only for that loopback URL and
-checked by `scripts/verify-pqc-gateway.sh`.
+`127.0.0.1:18082`, where HAProxy (an ML-DSA-only client) authenticates the
+issuer with its ML-DSA certificate; `disable_jwk_security` is allowed only for
+that loopback URL and checked by `scripts/verify-pqc-gateway.sh`.
 
 ## Testing & CI
 
 - Validate gateway config locally: `./scripts/ci-validate.sh` runs `krakend
   check` on every config (via local binary or the `krakend:2.13.4` Docker
-  image), `haproxy -c` on both terminator configs with generated ML-DSA
-  material, `scripts/verify-bootstrap-scopes.sh` and
+  image), `haproxy -c` on both terminator configs with generated ML-DSA and
+  ECDSA material, `scripts/verify-bootstrap-scopes.sh` and
   `scripts/verify-pqc-gateway.sh`.
 - CI (`.github/workflows/ci.yml`) runs the same validation gate on every push/PR
   to `main`.

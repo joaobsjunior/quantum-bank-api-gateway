@@ -87,16 +87,30 @@ paths:
         - OAuth2Bearer: []
           MutualTLS: []
       x-listener: banking
+      x-quantum-envelope: required
       requestBody:
         required: true
+        description: >-
+          Plaintext schema `PixTransferRequest`; app-edge clients send it sealed in
+          the hybrid post-quantum envelope (`application/vnd.quantum-bank.envelope+json`,
+          see `EnvelopeMessage`). Strict-tier service clients may send plain JSON.
         content:
+          application/vnd.quantum-bank.envelope+json:
+            schema:
+              $ref: '#/components/schemas/EnvelopeMessage'
           application/json:
             schema:
               $ref: '#/components/schemas/PixTransferRequest'
       responses:
         "200":
-          description: Pix transfer simulated as success.
+          description: >-
+            Pix transfer simulated as success. Enveloped requests receive the response
+            sealed in an `EnvelopeMessage` whose plaintext is `PixTransferSuccessResponse`
+            (header `X-Quantum-Envelope-Content-Type: application/json`).
           content:
+            application/vnd.quantum-bank.envelope+json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeMessage'
             application/json:
               schema:
                 $ref: '#/components/schemas/PixTransferSuccessResponse'
@@ -110,6 +124,8 @@ paths:
           $ref: '#/components/responses/InternalProblem'
   /statements:
     get:
+      parameters:
+        - $ref: '#/components/parameters/QuantumEnvelopeHeader'
       tags: [Statements]
       summary: Retrieve account statement entries.
       operationId: getStatements
@@ -136,6 +152,9 @@ paths:
         "200":
           description: Statement data.
           content:
+            application/vnd.quantum-bank.envelope+json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeMessage'
             application/json:
               schema:
                 $ref: '#/components/schemas/StatementResponse'
@@ -147,6 +166,8 @@ paths:
           $ref: '#/components/responses/InternalProblem'
   /profile:
     get:
+      parameters:
+        - $ref: '#/components/parameters/QuantumEnvelopeHeader'
       tags: [Profile]
       summary: Retrieve customer registration data.
       operationId: getProfile
@@ -160,6 +181,9 @@ paths:
         "200":
           description: Customer profile data.
           content:
+            application/vnd.quantum-bank.envelope+json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeMessage'
             application/json:
               schema:
                 $ref: '#/components/schemas/ProfileResponse'
@@ -182,6 +206,9 @@ paths:
       requestBody:
         required: true
         content:
+          application/vnd.quantum-bank.envelope+json:
+            schema:
+              $ref: '#/components/schemas/EnvelopeMessage'
           application/json:
             schema:
               $ref: '#/components/schemas/ProfileUpdateRequest'
@@ -189,6 +216,9 @@ paths:
         "200":
           description: Updated customer profile data.
           content:
+            application/vnd.quantum-bank.envelope+json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeMessage'
             application/json:
               schema:
                 $ref: '#/components/schemas/ProfileResponse'
@@ -239,7 +269,131 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetails'
+  parameters:
+    QuantumEnvelopeHeader:
+      name: X-Quantum-Envelope
+      in: header
+      required: false
+      description: >-
+        Base64url `EnvelopeMessage` (without `nonce`/`ciphertext`) carrying the
+        ML-KEM-768 ciphertext and the ephemeral X25519 key of a request without a
+        body. Required for app-edge OAuth2 clients (feature 012); the response is
+        then sealed in an `EnvelopeMessage`.
+      schema:
+        type: string
   schemas:
+    EnvelopeMessage:
+      type: object
+      description: >-
+        Hybrid post-quantum application envelope (contract envelope-v1): the
+        request encapsulates to the backend's ML-KEM-768 and X25519 keys and seals
+        the JSON body with AES-256-GCM under an HKDF-SHA-256 key bound to
+        `METHOD PATH`; the response reuses the request secret (response key).
+      required:
+        - v
+        - kid
+      properties:
+        v:
+          type: integer
+          enum: [1]
+        kid:
+          type: string
+          maxLength: 64
+        mlkemCiphertext:
+          type: string
+          format: byte
+          description: 1088-byte FIPS 203 ML-KEM-768 ciphertext (requests only).
+        x25519PublicKey:
+          type: string
+          format: byte
+          description: 32-byte ephemeral X25519 public key (requests only).
+        nonce:
+          type: string
+          format: byte
+          description: 12-byte AES-GCM nonce.
+        ciphertext:
+          type: string
+          format: byte
+          description: AES-256-GCM ciphertext with 16-byte tag.
+        contentType:
+          type: string
+          description: Media type of the decrypted body (responses only).
+    EnvelopeKeySet:
+      type: object
+      required: [kid, alg, mlkemPublicKey, x25519PublicKey, notAfter]
+      properties:
+        kid:
+          type: string
+        alg:
+          type: string
+          enum: [X25519MLKEM768-HKDF-SHA256-AES256GCM]
+        mlkemPublicKey:
+          type: string
+          format: byte
+          description: 1184-byte ML-KEM-768 encapsulation key.
+        x25519PublicKey:
+          type: string
+          format: byte
+        notAfter:
+          type: string
+          format: date-time
+    SignedEnvelopeKeySet:
+      type: object
+      description: >-
+        Envelope key set signed with the backend's PKI-issued ML-DSA-65 identity
+        (context `quantum-bank-envelope-keys-v1`); the app verifies the chain up
+        to the bundled ML-DSA-87 root in pure Dart.
+      required: [keySet, signature, signerChain]
+      properties:
+        keySet:
+          $ref: '#/components/schemas/EnvelopeKeySet'
+        signature:
+          type: string
+          format: byte
+        signerChain:
+          type: array
+          items:
+            type: string
+            description: PEM certificate, leaf first.
+    SigningKeyRegistration:
+      type: object
+      description: >-
+        Device ML-DSA-65 signing key registered at enrollment; `proof` is an
+        ML-DSA-65 signature over the DER CSR (context `quantum-bank-signing-key-v1`).
+      required: [alg, publicKey, proof]
+      properties:
+        alg:
+          type: string
+          enum: [ML-DSA-65]
+        publicKey:
+          type: string
+          format: byte
+          description: 1952-byte FIPS 204 public key.
+        proof:
+          type: string
+          format: byte
+    TransactionSignature:
+      type: object
+      description: >-
+        ML-DSA-65 signature of the canonical Pix order (context
+        `quantum-bank-pix-v1`), nonce-protected against replay; required for
+        app-edge OAuth2 clients.
+      required: [alg, deviceId, nonce, issuedAt, value]
+      properties:
+        alg:
+          type: string
+          enum: [ML-DSA-65]
+        deviceId:
+          type: string
+        nonce:
+          type: string
+          format: uuid
+        issuedAt:
+          type: string
+          format: date-time
+        value:
+          type: string
+          format: byte
     OtkIssueRequest:
       type: object
       required:
@@ -293,6 +447,10 @@ components:
           type: string
           enum:
             - quantum-bank-mobile-client-v1
+        environment:
+          type: string
+        signingKey:
+          $ref: '#/components/schemas/SigningKeyRegistration'
     CsrSubmitResponse:
       type: object
       required:
@@ -313,6 +471,8 @@ components:
           format: date-time
         correlationId:
           type: string
+        envelopeKeys:
+          $ref: '#/components/schemas/SignedEnvelopeKeySet'
     PixTransferRequest:
       type: object
       required:
@@ -333,6 +493,8 @@ components:
           enum:
             - SUCCESS
             - ERROR
+        signature:
+          $ref: '#/components/schemas/TransactionSignature'
     PixTransferSuccessResponse:
       type: object
       required:

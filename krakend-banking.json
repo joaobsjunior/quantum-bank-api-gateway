@@ -71,7 +71,8 @@
       "input_headers": [
         "Authorization",
         "Content-Type",
-        "X-Correlation-Id"
+        "X-Correlation-Id",
+        "X-Quantum-Envelope"
       ],
       "output_encoding": "no-op"
     },
@@ -119,7 +120,8 @@
       "input_headers": [
         "Authorization",
         "Content-Type",
-        "X-Correlation-Id"
+        "X-Correlation-Id",
+        "X-Quantum-Envelope"
       ],
       "output_encoding": "no-op"
     },
@@ -167,7 +169,8 @@
       "input_headers": [
         "Authorization",
         "Content-Type",
-        "X-Correlation-Id"
+        "X-Correlation-Id",
+        "X-Quantum-Envelope"
       ],
       "output_encoding": "no-op"
     },
@@ -215,7 +218,8 @@
       "input_headers": [
         "Authorization",
         "Content-Type",
-        "X-Correlation-Id"
+        "X-Correlation-Id",
+        "X-Quantum-Envelope"
       ],
       "output_encoding": "no-op"
     }
